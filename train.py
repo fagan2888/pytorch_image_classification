@@ -400,6 +400,9 @@ def test(epoch, model, criterion, test_loader, run_config, writer):
 
     model.eval()
 
+    # Store models entire set of predictions
+    prediction_vectors = np.array([])
+
     loss_meter = AverageMeter()
     correct_meter = AverageMeter()
     start = time.time()
@@ -420,7 +423,11 @@ def test(epoch, model, criterion, test_loader, run_config, writer):
             outputs = model(data)
             loss = criterion(outputs, targets)
 
+
             _, preds = torch.max(outputs, dim=1)
+ 
+            # Track all of the model predictions
+            prediction_vectors = np.append(prediction_vectors, preds.cpu().data.numpy())
 
             loss_ = loss.item()
             correct_ = preds.eq(targets).sum().item()
@@ -457,7 +464,8 @@ def test(epoch, model, criterion, test_loader, run_config, writer):
             'time': elapsed,
         }),
     })
-    return test_log
+
+    return test_log, prediction_vectors
 
 
 def update_state(state, epoch, accuracy, model, optimizer):
@@ -558,7 +566,8 @@ def main():
 
     # run test before start training
     if run_config['test_first']:
-        test(0, model, test_criterion, test_loader, run_config, writer)
+        _, predictions = test(0, model, test_criterion, test_loader, run_config, writer)
+        utils.save_predictions(predictions, 0, outdir)
 
     state = {
         'config': config,
@@ -570,6 +579,7 @@ def main():
         'best_epoch': 0,
     }
     epoch_logs = []
+
     for epoch, seed in zip(range(1, optim_config['epochs'] + 1), epoch_seeds):
         np.random.seed(seed)
         # train
@@ -577,8 +587,8 @@ def main():
                           train_loader, config, writer, amp_handle)
 
         # test
-        test_log = test(epoch, model, test_criterion, test_loader, run_config,
-                        writer)
+        test_log, predictions = test(epoch, model, test_criterion, test_loader, run_config,
+                                     writer)
 
         epoch_log = train_log.copy()
         epoch_log.update(test_log)
@@ -591,6 +601,9 @@ def main():
 
         # save model
         utils.save_checkpoint(state, outdir)
+
+        # save predictions
+        utils.save_predictions(predictions, epoch, outdir)
 
 
 if __name__ == '__main__':

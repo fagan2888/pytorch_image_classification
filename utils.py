@@ -26,6 +26,14 @@ def load_model(config):
     Network = getattr(module, 'Network')
     return Network(config)
 
+def save_predictions(predictions, epoch, outdir):
+    dirname = outdir.resolve().as_posix().replace('/', '_')
+    tempdir = pathlib.Path(tempfile.mkdtemp(prefix=dirname, dir='/tmp'))
+    temppath = tempdir / 'predictions_{}.npy'.format(epoch)
+    with open(temppath, 'wb') as fout:
+        np.save(fout, predictions)
+    shutil.copy(temppath.as_posix(), outdir / temppath.name)
+    shutil.rmtree(tempdir, ignore_errors=True)
 
 def save_checkpoint(state, outdir):
     model_path = outdir / 'model_state.pth'
