@@ -14,19 +14,19 @@ RESULTS_DIR = "/home/john/pytorch_image_classification/results/cifar_search"
 
 assert len(GPU_INDICES) == NUM_GPUS
 
-rng = np.random.RandomState(None)
-
-def coin_flip():
-    return rng.choice([True, False])
-
-def unif_sample(low, high):
-     return (high - low) * rng.rand() + low
-
 
 def sample_command():
     # Always train a depth 110 resnet with preactivation
     base_cmd = "python -u train.py --arch resnet_preact --depth 110".split()
+    
+    # Potential to seed later
+    rng = np.random.RandomState(None)
 
+    def coin_flip():
+        return rng.choice([True, False])
+
+    def unif_sample(low, high):
+        return (high - low) * rng.rand() + low
 
     # Architecture
     block_type = rng.choice(["basic", "bottleneck"])
